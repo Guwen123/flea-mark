@@ -25,6 +25,5 @@ public class MvcConfig implements WebMvcConfigurer {
                 ).order(1);
 
         registry.addInterceptor(new RefreshTokenIntreceptor()).addPathPatterns("/**").order(0);//拦截所以请求（要求先执行）高优先级
-
     }
 }
