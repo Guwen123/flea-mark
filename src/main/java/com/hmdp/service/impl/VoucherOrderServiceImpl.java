@@ -11,6 +11,9 @@ import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.RedisLock;
 import com.hmdp.utils.UserHolder;
+import org.redisson.Redisson;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -18,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -37,6 +41,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private RedisIdWorker redisIdWorker;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private RedissonClient redissonClient;
     @Override
     @Transactional
     public Result seckillVoucher(Long voucherId) {
@@ -53,15 +59,29 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         if (stock < 1){
             return Result.fail("库存不足");
         }
-        RedisLock redisLock = new RedisLock(stringRedisTemplate, userId);
-        boolean lock = redisLock.tryLock(30);
+        // 使用自定义Redis来获取锁
+        // RedisLock redisLock = new RedisLock(stringRedisTemplate, userId);
+        // boolean lock = redisLock.tryLock(30);
+
+        // 使用Redisson
+        RLock lock = redissonClient.getLock("lock:order:" + userId);
+        boolean isLock = false;
+        try {
+            isLock = lock.tryLock(1, 10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         // 若获取锁失败，则返回错误信息
-        if (!lock){
+        if (!isLock){
             return Result.fail("请勿重复下单");
         }
-        // 获取锁成功，进行下单
-        IVoucherOrderService proxy =(IVoucherOrderService) AopContext.currentProxy();
-        return proxy.createVoucherOrder(userId, voucherId);
+        try {
+            // 获取锁成功，进行下单
+            IVoucherOrderService proxy =(IVoucherOrderService) AopContext.currentProxy();
+            return proxy.createVoucherOrder(userId, voucherId);
+        } finally {
+            lock.unlock();
+        }
 
     }
     @Transactional
