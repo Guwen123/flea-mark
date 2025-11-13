@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class JwtUtils {
     private static String singningKey = "TestPeo";
-    private static long expiration = 43200000L;
+    private static long expiration = 4320000000L;
 
 
     /**
