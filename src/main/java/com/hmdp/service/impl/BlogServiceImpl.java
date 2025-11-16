@@ -194,7 +194,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         for (Follow follow : followIds) {
             Long userId = follow.getUserId();
             String key = RedisConstants.FEED_KEY + userId;
-            stringRedisTemplate.opsForZSet().add(key, user.getId().toString(), System.currentTimeMillis());
+            stringRedisTemplate.opsForZSet().add(key, blog.getId().toString(), System.currentTimeMillis());
         }
         // 返回id
         return Result.ok(blog.getId());
