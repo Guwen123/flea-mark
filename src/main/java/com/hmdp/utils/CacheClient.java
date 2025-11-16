@@ -67,11 +67,15 @@ public class CacheClient {
         if (StrUtil.isBlank(string)){
             // 未命中
             R apply = function.apply(id);
+            RedisData redisData = new RedisData();
+            redisData.setData(apply);
+            redisData.setExpireTime(LocalDateTime.now().plusHours(unit.toHours(time)));
+
             if (apply == null){
                 this.set(keyPrefix + id, "", time, unit);
                 return null;
             }
-            this.set(keyPrefix + id, apply, time, unit);
+            this.set(keyPrefix + id, redisData, time, unit);
             return apply;
         }
         // 命中
